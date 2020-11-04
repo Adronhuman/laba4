@@ -1,0 +1,16 @@
+appdirs==1.4.4
+click==7.1.2
+distlib==0.3.1
+filelock==3.0.12
+Flask==1.1.2
+importlib-metadata==2.0.0
+importlib-resources==3.3.0
+itsdangerous==1.1.0
+Jinja2==2.11.2
+MarkupSafe==1.1.1
+mod-wsgi==4.7.1
+six==1.15.0
+traits==6.1.1
+virtualenv==20.1.0
+Werkzeug==1.0.1
+zipp==3.4.0
