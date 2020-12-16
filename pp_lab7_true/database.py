@@ -49,7 +49,7 @@ class User(Base, UserMixin):
         self.password = password
 
 
-engine = create_engine("postgres://postgres:postgres@localhost/adron")
+engine = create_engine('mssql+pyodbc://localhost\SQLEXPRESS01/vio?trusted_connection=yes&driver=SQL+Server+Native+Client+11.0')
 Base.metadata.create_all(engine)
 
 """Session = sessionmaker(engine)
