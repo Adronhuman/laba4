@@ -9,23 +9,23 @@ from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
 
-engine = create_engine('mssql+pyodbc://localhost\SQLEXPRESS01/vio?trusted_connection=yes&driver=SQL+Server+Native+Client+11.0')
+engine = create_engine('mssql+pyodbc://PC0007/lab-2?driver=SQL+Server+Native+Client+11.0')
 
 bcrypt = Bcrypt(app)
 
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
-auth = HTTPBasicAuth()
-
-
+auth = HTTPBasicAuth(app)
 
 @auth.verify_password
 def verify_password(username, password):
+    print("verify")
     user = session.query(User).filter_by(username = username).first()
-    bcrypt.check_password_hash(user.password, password)
-    return False
+    if user==None:
+        return False
+    return check_password_hash(user.password,password=password)
 
-@app.route('/articles/', methods=['POST'])
+@app.route('/articles', methods=['POST'])
 def addArticle():
     time = datetime.datetime.now()
     newArticle = Article(title=request.json['title'], text=request.json['text'],
@@ -47,15 +47,17 @@ def get_article(article_id):
         answer = {"id": article.id, "author_id": article.author_id, "text": article.text,
                   "create_date": article.create_date, "last_edit_date": article.last_edit_date}
         return jsonify({"article": answer})
+    
 
-
+@app.route('/articles/<int:article_id>', methods=['POST'])
 @auth.login_required
-@app.route('/article/<int:article_id>', methods=['POST'])
-def editArticle(article_id):
+def edit_article(article_id):
+    print(article_id)
     time = datetime.datetime.now()
     article = session.query(Article).filter_by(id=article_id).one()
+    user = session.query(User).filter_by(username=auth.current_user()).first()
     newRequest = Request(title=article.title, text=request.json['text'],
-                         article_id=article_id, user_id=current_user.id,
+                         article_id=article_id, user_id=user.id,
                          DateTimeOfRequest=str(time), status="waiting",
                          )
     session.add(newRequest)
@@ -63,13 +65,13 @@ def editArticle(article_id):
     return "success"
 
 
-@app.route('/user/', methods=['POST'])
+@app.route('/user', methods=['POST'])
 def create_user():
     newUser = User(username=request.json['username'],
                    password=generate_password_hash(request.json['password']),
                    email=request.json['email'],
                    phone=request.json['phone'],
-                   role='simple_user')
+                   role='moderator')
     session.add(newUser)
     session.commit()
     return "success"
@@ -80,14 +82,14 @@ def create_user():
 def get_user(id):
     print("yeah ")
     return "ewew",202
-##    number = session.query(User).order_by(User.id.desc()).first().id
-##    if id > number:
-##        abort(404)
-##    else:
-##        user = session.query(User).filter_by(id=id).one()
-##        answer = {"id": user.id, "email": user.email, "phone": user.phone,
-##                  "username": user.username, "role": user.role}
-##        return jsonify({"article": answer})
+    number = session.query(User).order_by(User.id.desc()).first().id
+    if id > number:
+        abort(404)
+    else:
+        user = session.query(User).filter_by(id=id).one()
+        answer = {"id": user.id, "email": user.email, "phone": user.phone,
+                  "username": user.username, "role": user.role}
+        return jsonify({"article": answer})
 
 
 @app.route('/user/logout/', methods=['GET'])
@@ -135,10 +137,13 @@ def delete_user(user_id):
 ##    return render_template('login.html', form=form)
 ##
 
-@auth.login_required
+
 @app.route('/requests/<int:request_id>/', methods=['GET'])
+@auth.login_required
 def get_request(request_id):
-    if current_user.role != "moderator":
+    user = session.query(User).filter_by(username=auth.current_user()).first()
+    print(user.username)
+    if user.role != "moderator":
         return make_response('Access denied', 403)
     else:
         request_ = session.query(Request).filter_by(id=request_id).one()
@@ -148,17 +153,18 @@ def get_request(request_id):
         return jsonify({"request": answer})
 
 
+@app.route('/requests/<int:request_id>', methods=['POST'])
 @auth.login_required
-@app.route('/requests/<int:request_id>/', methods=['POST'])
 def set_status(request_id):
-    print(auth.current_user())
-    if auth.current_user().role != "moderator":
+    user = session.query(User).filter_by(username=auth.current_user()).first()
+    if user.role != "moderator":
         return make_response('Access denied', 403)
     else:
         editedRequest = session.query(Request).filter_by(id=request_id).one()
-        editedRequest.status = request.form["status"]
+        print(request.json)
+        editedRequest.status = request.json["status"]
         session.commit()
-        if request.form["status"] == 'accepted':
+        if request.json["status"] == 'accepted':
             time = datetime.datetime.now()
             editedRequest = session.query(Request).filter_by(id=request_id).one()
             article_id = editedRequest.article_id
@@ -171,4 +177,4 @@ def set_status(request_id):
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

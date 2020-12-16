@@ -48,8 +48,8 @@ class User(Base, UserMixin):
     def set_password(self, password):
         self.password = password
 
+engine = create_engine('mssql+pyodbc://PC0007/lab-2?driver=SQL+Server+Native+Client+11.0')
 
-engine = create_engine('mssql+pyodbc://localhost\SQLEXPRESS01/vio?trusted_connection=yes&driver=SQL+Server+Native+Client+11.0')
 Base.metadata.create_all(engine)
 
 """Session = sessionmaker(engine)
